@@ -6,7 +6,7 @@ import io.mockk.verify
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.newSingleThreadContext
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -26,7 +26,7 @@ class MigratorTest {
     lateinit var migrationStrategyFactory: MigrationStrategyFactory
 
     @BeforeEach
-    fun initilize() {
+    fun initialize() {
         migrationContext = MigrationContext(false)
         migrationJobFactory = spyk(MigrationJobFactory(migrationContext, CoroutineScope(Dispatchers.Main + Job())))
         migrationCompletedListener = spyk<MigrationCompletedListener>(block = {})
@@ -41,7 +41,10 @@ class MigratorTest {
         val migrations = slot<List<Migration>>()
         val execute = strategy(listOf(Migration.of(Migration.ALWAYS) { true }, Migration.of(2f) { false }))
 
-        execute.await()
+        // Execute asynchronously without blocking the main thread
+        launch { 
+            execute.await()
+        }
 
         verify { migrationJobFactory.create(capture(migrations)) }
         assertEquals(1, migrations.captured.size)
@@ -82,7 +85,10 @@ class MigratorTest {
         val migrations = slot<List<Migration>>()
         val execute = strategy(listOf(Migration.of(Migration.ALWAYS) { true }, Migration.of(2f) { true }))
 
-        execute.await()
+        // Execute asynchronously without blocking the main thread
+        launch {
+            execute.await()
+        }
 
         verify { migrationJobFactory.create(capture(migrations)) }
         assertEquals(2, migrations.captured.size)
@@ -110,7 +116,10 @@ class MigratorTest {
         val migrations = slot<List<Migration>>()
         val execute = strategy(input)
 
-        execute.await()
+        // Execute asynchronously without blocking the main thread
+        launch { 
+            execute.await()
+        }
 
         verify { migrationJobFactory.create(capture(migrations)) }
         assertEquals(10, migrations.captured.size)
@@ -131,7 +140,10 @@ class MigratorTest {
             ),
         )
 
-        execute.await()
+        // Execute asynchronously without blocking the main thread
+        launch { 
+            execute.await()
+        }
 
         verify { migrationJobFactory.create(capture(migrations)) }
         assertEquals(2, migrations.captured.size)
